@@ -7,7 +7,6 @@ from PIL import Image
 from pystray import MenuItem as item
 
 config = {
-    "3": r"C:\Users\Burak\AppData\Local\Razer\Synapse3\Log\Razer Synapse 3.log",
     "4": r"C:\Users\Burak\AppData\Local\Razer\RazerAppEngine\User Data\Logs\systray_systrayv2.log",
     "interval": "5s",
 }
@@ -22,10 +21,15 @@ hasBattery = None
 
 def find_last_line_with_keyword(file_name, keyword):
     last_line = None
-    with open(file_name, 'r') as file:
-        for line in file:
-            if keyword in line:
-                last_line = line
+    try:
+        with open(file_name, 'r') as file:
+            for line in file:
+                if keyword in line:
+                    last_line = line
+    except FileNotFoundError:
+        return False, f"File {file_name} not found."
+    except Exception as e:
+        return False, f"An error occurred: {str(e)}"
     return last_line
 
 def main():
@@ -34,11 +38,16 @@ def main():
     global chargingStatus
     global level
     global hasBattery
+    global isStop
 
     file_name = config[razer_version]
     keyword = "connectingDeviceData"
 
-    last_line_with_keyword = find_last_line_with_keyword(file_name, keyword)
+    last_line_with_keyword, err= find_last_line_with_keyword(file_name, keyword)
+    
+    if not last_line_with_keyword:
+        return err
+        
 
     if last_line_with_keyword:
         last_line_with_keyword = json.loads(last_line_with_keyword.split("~")[-1].split("connectingDeviceData:")[1])
@@ -63,15 +72,20 @@ def update_icon():
     global isStop
 
     while not isStop:
-        main()  # Ana işlevi çağır
+        err = main()  # Ana işlevi çağır
+        if err:
+            print(err, "Program sonlandırılıyor.")
+            icon.stop()  # Sistem tepsisi simgesini kaldır
+
         print("İkon güncellendi:", deviceName, level)
         menu = tuple(menu_items + [item("Çıkış", exit_program)])  # Güncel menü öğelerini kullan
         icon.menu = menu  # Menüyü güncelle
         icon.title = deviceName + f" ({level}% - {"Şarj Ediliyor" if chargingStatus == "Charging" else "Şarj Edilmiyor"})"
-        time.sleep(5)  # 5 saniye beklet
+        sleepTime = int(config["interval"][:-1])
+        time.sleep(sleepTime)  # 5 saniye beklet
 
 # Sistem tepsisi simgesini kapatma işlevi
-def exit_program(icon, item):
+def exit_program(icon):
     global isStop
     isStop = True
     icon.stop()  # Sistem tepsisi simgesini kaldır
