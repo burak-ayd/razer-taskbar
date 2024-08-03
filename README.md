@@ -12,5 +12,5 @@
 3. Aşağıdaki komutu kullanarak `pystray` kütüphanesini yükleyin:
    
    ```
-   pip install pystray
+   pip install pystray pillow
    ```
