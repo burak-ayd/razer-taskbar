@@ -19,7 +19,8 @@ isStop = False
 menu_items = []  # Menü öğelerini burada tanımlayalım
 deviceName = ""  # Boş bir dize olarak başlatıyoruz
 chargingState= None
-batteryPercentage = ""  # Boş bir dize olarak başlatıyoruz
+batteryPercentage = 0  # Boş bir dize olarak başlatıyoruz
+assetsFolder = os.path.join(os.path.dirname(__file__), "assets")
 
 def signal_close(signum, frame):
     global isStop
@@ -94,7 +95,31 @@ def update_icon():
         if err:
             print(err, "Program sonlandırılıyor.")
             icon.stop()  # Sistem tepsisi simgesini kaldır
+            
+        if chargingState == "True":
+            if 0<=int(batteryPercentage)<=20:
+                image = Image.open(assetsFolder+f"/battery0_chrg_@2x.png")
+            elif 21<=int(batteryPercentage)<=40:
+                image = Image.open(assetsFolder+f"/battery25_chrg_@2x.png")
+            elif 41<=int(batteryPercentage)<=60:
+                image = Image.open(assetsFolder+f"/battery50_chrg_@2x.png")
+            elif 61<=int(batteryPercentage)<=80:
+                image = Image.open(assetsFolder+f"/battery75_chrg_@2x.png")
+            else:
+                image = Image.open(assetsFolder+f"/battery100_chrg_@2x.png")
+        else:
+            if 0<=int(batteryPercentage)<=20:
+                image = Image.open(assetsFolder+f"/battery0_@2x.png")
+            elif 21<=int(batteryPercentage)<=40:
+                image = Image.open(assetsFolder+f"/battery25_@2x.png")
+            elif 41<=int(batteryPercentage)<=60:
+                image = Image.open(assetsFolder+f"/battery50_@2x.png")
+            elif 61<=int(batteryPercentage)<=80:
+                image = Image.open(assetsFolder+f"/battery75_@2x.png")
+            else:
+                image = Image.open(assetsFolder+f"/battery100_@2x.png")
         
+        icon.icon = image  # İkonu güncelle
 
         print("İkon güncellendi:", deviceName, batteryPercentage)
         menu = tuple(menu_items + [item("Çıkış", exit_program)])  # Güncel menü öğelerini kullan
@@ -113,7 +138,8 @@ def exit_program(icon):
 
 if __name__ == "__main__":
     # Tray Icon'u oluştur
-    image = Image.open(os.path.dirname(os.path.realpath(__file__))+"/icon.png")
+    image = Image.open(assetsFolder+"/icon.png")
+    
     menu = tuple(menu_items + [item("Çıkış", exit_program)])
     icon = pystray.Icon("Razer", image, deviceName + f" ({batteryPercentage}%)", menu)
 

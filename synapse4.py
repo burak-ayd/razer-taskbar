@@ -1,4 +1,5 @@
 import json
+import os
 import signal
 import threading
 import time
@@ -19,6 +20,7 @@ deviceName = ""  # Boş bir dize olarak başlatıyoruz
 chargingStatus = None
 level = ""  # Boş bir dize olarak başlatıyoruz
 hasBattery = None
+assetsFolder = os.path.join(os.path.dirname(__file__), "assets")
 
 def signal_close(signum, frame):
     global isStop
@@ -83,6 +85,31 @@ def update_icon():
         if err:
             print(err, "Program sonlandırılıyor.")
             icon.stop()  # Sistem tepsisi simgesini kaldır
+            
+        if chargingStatus == "True":
+            if 0<=int(level)<=20:
+                image = Image.open(assetsFolder+f"/battery0_chrg_@2x.png")
+            elif 21<=int(level)<=40:
+                image = Image.open(assetsFolder+f"/battery25_chrg_@2x.png")
+            elif 41<=int(level)<=60:
+                image = Image.open(assetsFolder+f"/battery50_chrg_@2x.png")
+            elif 61<=int(level)<=80:
+                image = Image.open(assetsFolder+f"/battery75_chrg_@2x.png")
+            else:
+                image = Image.open(assetsFolder+f"/battery100_chrg_@2x.png")
+        else:
+            if 0<=int(level)<=20:
+                image = Image.open(assetsFolder+f"/battery0_@2x.png")
+            elif 21<=int(level)<=40:
+                image = Image.open(assetsFolder+f"/battery25_@2x.png")
+            elif 41<=int(level)<=60:
+                image = Image.open(assetsFolder+f"/battery50_@2x.png")
+            elif 61<=int(level)<=80:
+                image = Image.open(assetsFolder+f"/battery75_@2x.png")
+            else:
+                image = Image.open(assetsFolder+f"/battery100_@2x.png")
+        
+        icon.icon = image  # İkonu güncelle
 
         print("İkon güncellendi:", deviceName, level)
         menu = tuple(menu_items + [item("Çıkış", exit_program)])  # Güncel menü öğelerini kullan
@@ -99,7 +126,7 @@ def exit_program(icon):
 
 if __name__ == "__main__":
     # Tray Icon'u oluştur
-    image = Image.open("icon.png")
+    image = Image.open(assetsFolder+"/icon.png")
     menu = tuple(menu_items + [item("Çıkış", exit_program)])
     icon = pystray.Icon("Razer", image, deviceName + f" ({level}%)", menu)
 
