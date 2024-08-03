@@ -1,4 +1,5 @@
 import json
+import signal
 import threading
 import time
 
@@ -18,6 +19,12 @@ deviceName = ""  # Boş bir dize olarak başlatıyoruz
 chargingStatus = None
 level = ""  # Boş bir dize olarak başlatıyoruz
 hasBattery = None
+
+def signal_close(signum, frame):
+    global isStop
+    isStop = True
+    
+signal.signal(signal.SIGINT, signal_close)
 
 def find_last_line_with_keyword(file_name, keyword):
     last_line = None

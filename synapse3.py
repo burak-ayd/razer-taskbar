@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import signal
 import threading
 import time
 
@@ -18,6 +20,12 @@ menu_items = []  # Menü öğelerini burada tanımlayalım
 deviceName = ""  # Boş bir dize olarak başlatıyoruz
 chargingState= None
 batteryPercentage = ""  # Boş bir dize olarak başlatıyoruz
+
+def signal_close(signum, frame):
+    global isStop
+    isStop = True
+    
+signal.signal(signal.SIGINT, signal_close)
 
 def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargingPattern):
     lastBatteryPercentage = lastChargingState = lastDeviceName = log_content = None
@@ -86,6 +94,7 @@ def update_icon():
         if err:
             print(err, "Program sonlandırılıyor.")
             icon.stop()  # Sistem tepsisi simgesini kaldır
+        
 
         print("İkon güncellendi:", deviceName, batteryPercentage)
         menu = tuple(menu_items + [item("Çıkış", exit_program)])  # Güncel menü öğelerini kullan
@@ -93,6 +102,8 @@ def update_icon():
         icon.title = str(deviceName) + f" ({batteryPercentage}% - {"Şarj Ediliyor" if chargingState == "True" else "Şarj Edilmiyor"})"
         sleepTime = int(config["interval"][:-1])
         time.sleep(sleepTime)  # 5 saniye beklet
+    print("Program sonlandırıldı.")
+    icon.stop()  # Sistem tepsisi simgesini kaldır
 
 # Sistem tepsisi simgesini kapatma işlevi
 def exit_program(icon):
@@ -102,7 +113,7 @@ def exit_program(icon):
 
 if __name__ == "__main__":
     # Tray Icon'u oluştur
-    image = Image.open("./icon.png")
+    image = Image.open(os.path.dirname(os.path.realpath(__file__))+"/icon.png")
     menu = tuple(menu_items + [item("Çıkış", exit_program)])
     icon = pystray.Icon("Razer", image, deviceName + f" ({batteryPercentage}%)", menu)
 
