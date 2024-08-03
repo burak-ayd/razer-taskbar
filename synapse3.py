@@ -21,6 +21,7 @@ deviceName = ""  # Boş bir dize olarak başlatıyoruz
 chargingState= None
 batteryPercentage = 0  # Boş bir dize olarak başlatıyoruz
 assetsFolder = os.path.join(os.path.dirname(__file__), "assets")
+isDeviceRemoved = False
 
 def signal_close(signum, frame):
     global isStop
@@ -28,15 +29,21 @@ def signal_close(signum, frame):
     
 signal.signal(signal.SIGINT, signal_close)
 
-def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargingPattern):
-    lastBatteryPercentage = lastChargingState = lastDeviceName = log_content = None
+def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargingPattern, deviceLoadedPattern, deviceRemovedPattern):
+    lastBatteryPercentage = lastChargingState = lastDeviceName = log_content =  None
+    deviceRemoved = False
     pattern = re.compile(batteryStatePattern, re.MULTILINE)
     batteryStatusPattern = re.compile(batteryIsChargingPattern, re.MULTILINE)
+    deviceLoadedPattern = re.compile(deviceLoadedPattern, re.MULTILINE)
+    deviceRemovedPattern = re.compile(deviceRemovedPattern, re.MULTILINE)
+    
     try:
         with open(file_name, 'r') as file:
             log_content = file.read()
             last_match = list(pattern.finditer(log_content))[-1]
             batteryStatusMatch = list(batteryStatusPattern.finditer(log_content))[-1]
+            deviceLoadedMatches = list(deviceLoadedPattern.finditer(log_content))
+            deviceRemovedMatches = list(deviceRemovedPattern.finditer(log_content))
             if last_match:
                 lastDeviceName = last_match.group('name')
                 lastBatteryPercentage = last_match.group('level')
@@ -46,26 +53,36 @@ def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargin
                 lastChargingState = batteryStatusMatch.group('isCharging')
             else:
                 print("No match found. Status")
+            
+            print("Device Loaded Matches:", len(deviceLoadedMatches))
+            print("Device Removed Matches:", len(deviceRemovedMatches))
+            if len(deviceLoadedMatches) > len(deviceRemovedMatches):
+                deviceRemoved = False
+            else:
+                deviceRemoved = True
 
     except FileNotFoundError:
-        return False, False, False, f"File {file_name} not found."
+        return False, False, False, False, f"File {file_name} not found."
     except Exception as e:
-        return False, False, False, f"An error occurred: {str(e)}"
-    return lastBatteryPercentage, lastChargingState, lastDeviceName, None
+        return False, False, False, False, f"An error occurred: {str(e)}"
+    return lastBatteryPercentage, lastChargingState, lastDeviceName, deviceRemoved, None
 
 def main():
     global menu_items
     global deviceName
     global chargingState
     global batteryPercentage
-    global hasBattery
     global isStop
+    global isDeviceRemoved
 
     file_name = config[razer_version]
     
     batteryStatePatern = r"^(?P<dateTime>.+?) INFO.+?_OnBatteryLevelChanged[\s\S]*?Name: (?P<name>.*)[\s\S]*?Handle: (?P<handle>\d+)[\s\S]*?level (?P<level>\d+)"
     batteryIsChargingPattern = r"^(?P<dateTime>.+?) INFO.+?_OnDevicePowerStateChanged[\s\S]*?: (?P<name>.*) (?P<isCharging>.*)"
-    batteryPercentage, chargingState, deviceName, err= find_last_line_with_keyword(file_name, batteryStatePatern, batteryIsChargingPattern)
+    deviceLoadedPattern = r"^(?P<dateTime>.+?) INFO.+?_OnDeviceLoaded[\s\S]*?Name: (?P<name>.*)[\s\S]*?Handle: (?P<handle>\d+)[\s\S]"
+    deviceRemovedPattern = r"^(?P<dateTime>.+?) INFO.+?_OnDeviceRemoved[\s\S]*?Name: (?P<name>.*)[\s\S]*?Handle: (?P<handle>\d+)[\s\S]"
+    
+    batteryPercentage, chargingState, deviceName, isDeviceRemoved, err= find_last_line_with_keyword(file_name, batteryStatePatern, batteryIsChargingPattern, deviceLoadedPattern, deviceRemovedPattern)
     
     if not batteryPercentage and chargingState and deviceName:
         return err
@@ -89,6 +106,7 @@ def main():
 def update_icon():
     global icon
     global isStop
+    global isDeviceRemoved
 
     while not isStop:
         err = main()  # Ana işlevi çağır
@@ -118,13 +136,18 @@ def update_icon():
                 image = Image.open(assetsFolder+f"/battery75_@2x.png")
             else:
                 image = Image.open(assetsFolder+f"/battery100_@2x.png")
-        
+                
+        if isDeviceRemoved:
+            image = Image.open(assetsFolder+f"/battery_unknown_@2x.png")
+            title = "Bağlı Cihaz Yok"
+        else:
+            title = str(deviceName) + f" ({batteryPercentage}% - {"Şarj Ediliyor" if chargingState == "True" else "Şarj Edilmiyor"})"
         icon.icon = image  # İkonu güncelle
 
         print("İkon güncellendi:", deviceName, batteryPercentage)
         menu = tuple(menu_items + [item("Çıkış", exit_program)])  # Güncel menü öğelerini kullan
         icon.menu = menu  # Menüyü güncelle
-        icon.title = str(deviceName) + f" ({batteryPercentage}% - {"Şarj Ediliyor" if chargingState == "True" else "Şarj Edilmiyor"})"
+        icon.title = title
         sleepTime = int(config["interval"][:-1])
         time.sleep(sleepTime)  # 5 saniye beklet
     print("Program sonlandırıldı.")
@@ -138,7 +161,7 @@ def exit_program(icon):
 
 if __name__ == "__main__":
     # Tray Icon'u oluştur
-    image = Image.open(assetsFolder+"/icon.png")
+    image = Image.open(assetsFolder+"/battery_unknown_@2x.png")
     
     menu = tuple(menu_items + [item("Çıkış", exit_program)])
     icon = pystray.Icon("Razer", image, deviceName + f" ({batteryPercentage}%)", menu)
