@@ -9,7 +9,7 @@
 
 1. Python 3.6 veya daha yeni bir sürümünü kurun.
 2. Komut istemcisini yönetici olarak açın.
-3. Aşağıdaki komutu kullanarak `pystray` kütüphanesini yükleyin:
+3. Aşağıdaki komutu kullanarak `pystray` ve `PIL` kütüphanelerini yükleyin:
    
    ```
    pip install pystray pillow
