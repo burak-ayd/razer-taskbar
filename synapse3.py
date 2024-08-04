@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import re
@@ -44,6 +45,7 @@ def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargin
             batteryStatusMatch = list(batteryStatusPattern.finditer(log_content))[-1]
             deviceLoadedMatches = list(deviceLoadedPattern.finditer(log_content))
             deviceRemovedMatches = list(deviceRemovedPattern.finditer(log_content))
+            
             if last_match:
                 lastDeviceName = last_match.group('name')
                 lastBatteryPercentage = last_match.group('level')
@@ -54,12 +56,20 @@ def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargin
             else:
                 print("No match found. Status")
             
-            print("Device Loaded Matches:", len(deviceLoadedMatches))
-            print("Device Removed Matches:", len(deviceRemovedMatches))
-            if len(deviceLoadedMatches) > len(deviceRemovedMatches):
-                deviceRemoved = False
-            else:
-                deviceRemoved = True
+            try:
+                loadedTime = datetime.datetime.strptime(deviceLoadedMatches[-1].group('dateTime'), "%Y-%m-%d %H:%M:%S.%f")
+                removedTime = datetime.datetime.strptime(deviceRemovedMatches[-1].group('dateTime'), "%Y-%m-%d %H:%M:%S.%f")
+                print("Time: ",removedTime, loadedTime, removedTime < loadedTime, removedTime - loadedTime)
+                print("Device Loaded Matches:", len(deviceLoadedMatches))
+                print("Device Removed Matches:", len(deviceRemovedMatches))
+                if removedTime < loadedTime:
+                    deviceRemoved = False
+                else:
+                    deviceRemoved = True
+            except Exception as e:
+                print("Device Loaded Time Error: ",e)
+            
+            
 
     except FileNotFoundError:
         return False, False, False, False, f"File {file_name} not found."
