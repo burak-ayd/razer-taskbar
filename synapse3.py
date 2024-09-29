@@ -39,7 +39,7 @@ def find_last_line_with_keyword(file_name, batteryStatePattern, batteryIsChargin
     deviceRemovedPattern = re.compile(deviceRemovedPattern, re.MULTILINE)
     
     try:
-        with open(file_name, 'r') as file:
+        with open(file_name, 'r', encoding="utf8") as file:
             log_content = file.read()
             last_match = list(pattern.finditer(log_content))[-1]
             batteryStatusMatch = list(batteryStatusPattern.finditer(log_content))[-1]
